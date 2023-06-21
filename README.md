@@ -1,6 +1,7 @@
 # Inkbird
 
 ## Skripte für den ioBroker zum Extrahieren von Daten aus dem Tuya Adapter für die Inkbird Gateways IBS-M1 (Gen2) und IBS-M2
+Voraussetzung für die Verwendung der Skripte ist, dass das Inkbird Gateway bereits nach Anleitung des Tuya Adapters eingebunden ist.
 
 ### IBS-M2
 Das Skript InkbirdM2.js ist für das Gateway M2 vorgesehen. Es liest die Echtzeitdaten für Temperatur und Feuchte, sowie Batteriezustand aus.
