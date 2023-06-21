@@ -15,7 +15,7 @@ In Zeile 10 ist die Tuya Instanz hinterlegt. Falls nicht "tuya.0" dann bitte anp
 ### IBS-M1
 Das Skript InkbirdM1.js ist für das Gateway M1 vorgesehen. Es liest die Gerätenamen, die Echtzeitdaten für Temperatur und Feuchte, sowie Batteriezustand aus.
 
-Die verbundenen Devices (max. 5ß) werden über ch_01 bis ch_50 ausgegeben.
+Die verbundenen Devices (max. 50) werden über ch_01 bis ch_50 ausgegeben.
 
 Das Skript wurde mit Gateway IBS-M1S2.0 und Poolsensor IBS-P01R, sowie ITH-20R getestet.
 
