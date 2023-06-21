@@ -10,7 +10,7 @@ const sInkbird = '0_userdata.0.Inkbird_M2.' + sID + '.'; // userdata Bereich fü
 const sTuya = 'tuya.0.' + sID + '.'; // Datenbereich des Tuya Adapters für das Inkbird Gerät; Tuya Adapter Instanz ggf. ändern
 
 /* allgemeine Variablen für das Gateway am Tuya Adapter */
-var iChMin = 0; // minimale Inkbird Channelnummer
+var iChMin = 0; // minimale Inkbird Channelnummer (0 = interner Sensor)
 var iChMax = 9; // maximale Inkbird Channelnummer (IBS-M2 unterstützt bis zu 9 Geräte)
 
 /* Variablen für die Channels */
@@ -100,6 +100,7 @@ function updateRtd(i) {
         }
 };
 
+// IBS-M2 Gateway --> Tuya --> Inkbird userdata
 /* Subscribe on Tuya RTD states */
 on ({id: sTuya+ichRtdPos[0], change: 'any'}, function() {updateRtd(0);});//Real Time Data
 on ({id: sTuya+ichRtdPos[1], change: 'any'}, function() {updateRtd(1);});//Real Time Data
@@ -111,3 +112,5 @@ on ({id: sTuya+ichRtdPos[6], change: 'any'}, function() {updateRtd(6);});//Real 
 on ({id: sTuya+ichRtdPos[7], change: 'any'}, function() {updateRtd(7);});//Real Time Data
 on ({id: sTuya+ichRtdPos[8], change: 'any'}, function() {updateRtd(8);});//Real Time Data
 on ({id: sTuya+ichRtdPos[9], change: 'any'}, function() {updateRtd(9);});//Real Time Data
+/* Subscribe on Tuya Para changes */
+on (sTuya+ichPara, function() {createChannels();});//Create new Channels
