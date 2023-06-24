@@ -28,6 +28,6 @@ Die verbundenen Devices (max. 9) werden über ch_1 bis ch_9 ausgegeben.
 Das Skript wurde mit Gateway IBS-M2 und Poolsensor IBS-P02R getestet.
 
 ### TUYA
-1. Das Inkbird Gateway und die Inkbird Sensoren mittels Inkbird Pro App einrichten (WLAN, Sensorname, usw.).
+1. Das Inkbird Gateway und die Inkbird Sensoren mittels Inkbird App (ehemals Inkbird Pro App) einrichten (WLAN, Sensoren, Sensornamen, usw.).
 2. Das Inkbird Gateway bzw. den Inkbird Sensor nun in der Tuya und/oder Smartlife App einrichten. Das Gateway / der Sensor sollte gefunden werden. Die Daten werden leider chinesisch angezeigt.
 3. Den Tuya Adapter nach Anleitung starten und einrichten. Er sollte das Inkbird Gateway finden.
