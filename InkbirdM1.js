@@ -2,7 +2,7 @@
 Inkbird Gateway IBS-M1
 Daten aus dem Tuya Adapter lesen
 ****************************************************/
-const Scriptversion = 'v0.03';   // 21.06.2023  jrudolph
+const Scriptversion = 'v0.04';   // 24.07.2023  jrudolph
 
 /* meine speziellen Variablen für den Inkbird und Tuya Adapter */
 const sID = 'bfxxxxxxxxxxxxxxxxxxxx'; // Device ID muss an das konkrete Gerät angepasst werden
@@ -14,6 +14,7 @@ var iChMin = 1; // minimale Inkbird Channelnummer
 var iChMax = 50; // maximale Inkbird Channelnummer (IBS-M1 unterstützt bis zu 50 Geräte)
 
 /* Variablen für die Channels */
+var ichRecLen = 250; // Channel Record Length (250 bytes)
 // 103 Parameter
 var ichPara = 103; // Channel Parameter
 var ichParaLen = 5; // Channel Parameter Length
@@ -72,8 +73,8 @@ function ch(i)
 
 function chName(ich)//Channel Name
 {
-    iy = ichNamePos[Math.floor((ich-1)/10)];
-    ix = (ich-1) % 10;
+    iy = ichNamePos[Math.floor((ich-1)/(ichRecLen/ichNameLen))];
+    ix = (ich-1) % (ichRecLen/ichNameLen);
     return Buffer.from(getState(sTuya+iy).val, 'base64').toString('utf8',ix*ichNameLen,(ix+1)*ichNameLen);
 }
 
@@ -90,8 +91,8 @@ function chPara(ich)//Channel Parameter
 
 function chRtd(ich)//Channel RealTimeData
 {
-    iy = ichRtdPos[Math.floor((ich-1)/25)];
-    ix = (ich-1) % 25;
+    iy = ichRtdPos[Math.floor((ich-1)/(ichRecLen/ichRtdLen))];
+    ix = (ich-1) % (ichRecLen/ichRtdLen);
     tin = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(1+ix*ichRtdLen)/10.;
     fin = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(3+ix*ichRtdLen)/10.;
     tex = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(5+ix*ichRtdLen)/10.;
