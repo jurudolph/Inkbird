@@ -2,145 +2,156 @@
 Inkbird Gateway IBS-M1
 Daten aus dem Tuya Adapter lesen
 ****************************************************/
-const Scriptversion = 'v0.04';   // 24.07.2023  jrudolph
+//const Scriptversion = 'v0.04';   // 24.07.2023  jrudolph
+const Scriptversion = 'v0.05';   // 13.08.2025 optimiert
 
 /* meine speziellen Variablen für den Inkbird und Tuya Adapter */
 const sID = 'bfxxxxxxxxxxxxxxxxxxxx'; // Device ID muss an das konkrete Gerät angepasst werden
-const sInkbird = '0_userdata.0.Inkbird_M1.' + sID + '.'; // userdata Bereich für die ermittelten Inkbird Daten
-const sTuya = 'tuya.0.' + sID + '.'; // Datenbereich des Tuya Adapters für das Inkbird Gerät; Tuya Adapter Instanz ggf. ändern
+const sInkbird = `0_userdata.0.Inkbird_M1.${sID}.`; // userdata Bereich für die ermittelten Inkbird Daten
+const sTuya = `tuya.0.${sID}.`; // Datenbereich des Tuya Adapters für das Inkbird Gerät; Tuya Adapter Instanz ggf. ändern
+/* Ende der eigenen Anpassungen */
 
 /* allgemeine Variablen für den Tuya Adapter */
-var iChMin = 1; // minimale Inkbird Channelnummer
-var iChMax = 50; // maximale Inkbird Channelnummer (IBS-M1 unterstützt bis zu 50 Geräte)
+const iChMin = 1; // minimale Inkbird Channelnummer
+const iChMax = 50; // maximale Inkbird Channelnummer (IBS-M1 unterstützt bis zu 50 Geräte)
 
-/* Variablen für die Channels */
-var ichRecLen = 250; // Channel Record Length (250 bytes)
-// 103 Parameter
-var ichPara = 103; // Channel Parameter
-var ichParaLen = 5; // Channel Parameter Length
-// 114+123 Real Time Data
-var ichRtdPos = [114,123]; // Channel Real Time Data
-var ichRtdLen = 10; // Channel Real Time Data Length
-// 118-122 Name
-var ichNamePos = [118,119,120,121,122]; // Channel Name
-var ichNameLen = 25; // Channel Name Length
+/* Konstanten für die Channels */
+const iChRecLen = 250;
+// Parameter
+const iChPara = 103;
+const iChParaLen = 5;
+// Real Time Data
+const iChRtdPos = [114, 123];
+const iChRtdLen = 10;
+// Name
+const iChNamePos = [118, 119, 120, 121, 122];
+const iChNameLen = 25;
 
-/* Variablen */
-var tin, fin, tex, fex, batt; // Temperature/Humidity internal/external, battery %
-
-/* allgemeine Variablen */
-var i, ix, iy, ich; //index
-var b1, b2, b3, b4; //Buffer Bytes
-
-
-//
-// Create Device Inkbird IBS-M1
-//
 createChannels();
 
-/* Functions */
+/**
+ * Erstellt Channels für belegte Inkbird-Kanäle
+ */
+function createChannels() {
+    for (let i = iChMin; i <= iChMax; i++) {
+        if (chPara(i) > 0) {
+            const channelPath = `${sInkbird}${ch(i)}`;
+            createState(channelPath, { name: ch(i) });
 
-//
-// Channel Funktionen
-//
-function createChannels()
-{
-    for (i = iChMin; i <= iChMax; i++)
-    {
-        if (chPara(i) > 0)//wenn der Kanal belegt ist
-        {
-            // Create Channel
-            createState(sInkbird+ch(i),{name: ch(i)});//Channel
+            createState(`${channelPath}.Name`, chName(i), { name: `${ch(i)}.Name` });
 
-            createState(sInkbird+ch(i)+'.'+'Name',chName(i),{name: ch(i)+'.Name'});//Name
-
-            chRtd(i);
-
-            // Create Real Time Data points
-            createState(sInkbird+ch(i)+'.'+'CurrentTempInt',tin,{name: ch(i)+'.CurrentTempInt', unit: '°C'});//
-            createState(sInkbird+ch(i)+'.'+'CurrentHumInt',fin,{name: ch(i)+'.CurrentHumInt', unit: '%'});//
-            createState(sInkbird+ch(i)+'.'+'CurrentTempExt',tex,{name: ch(i)+'.CurrentTempExt', unit: '°C'});//
-            createState(sInkbird+ch(i)+'.'+'CurrentHumExt',fex,{name: ch(i)+'.CurrentHumExt', unit: '%'});//
-            createState(sInkbird+ch(i)+'.'+'Battery',batt,{name: ch(i)+'.Battery', unit: '%'});//
+            const data = chRtd(i);
+            createState(`${channelPath}.CurrentTempInt`, data.tin, { name: `${ch(i)}.CurrentTempInt`, unit: '°C' });
+            createState(`${channelPath}.CurrentHumInt`, data.fin, { name: `${ch(i)}.CurrentHumInt`, unit: '%' });
+            createState(`${channelPath}.CurrentTempExt`, data.tex, { name: `${ch(i)}.CurrentTempExt`, unit: '°C' });
+            createState(`${channelPath}.CurrentHumExt`, data.fex, { name: `${ch(i)}.CurrentHumExt`, unit: '%' });
+            createState(`${channelPath}.Battery`, data.batt, { name: `${ch(i)}.Battery`, unit: '%' });
         }
     }
 }
 
-function ch(i)
-{
-    return 'ch_'+('0'+i).slice(-2);//Format ch_00
+/**
+ * Liefert den Channel-String: ch_01, ch_02, ...
+ */
+function ch(i) {
+    return `ch_${String(i).padStart(2, '0')}`;
 }
 
-function chName(ich)//Channel Name
-{
-    iy = ichNamePos[Math.floor((ich-1)/(ichRecLen/ichNameLen))];
-    ix = (ich-1) % (ichRecLen/ichNameLen);
-    return Buffer.from(getState(sTuya+iy).val, 'base64').toString('utf8',ix*ichNameLen,(ix+1)*ichNameLen);
+/**
+ * Liest den Namen eines Kanals aus
+ */
+function chName(i) {
+    const bufferIndex = Math.floor((i - 1) / (iChRecLen / iChNameLen));
+    const byteIndex = (i - 1) % (iChRecLen / iChNameLen);
+    const dp = getState(`${sTuya}${iChNamePos[bufferIndex]}`);
+    if (!dp || !dp.val) return 'n/a';
+    try {
+        return Buffer.from(dp.val, 'base64').toString('utf8', byteIndex * iChNameLen, (byteIndex + 1) * iChNameLen).replace(/\0/g, '').trim();
+    } catch {
+        return 'n/a';
+    }
 }
 
-function chPara(ich)//Channel Parameter
-{
-    iy = ichPara;
-    ix = ich - 1;
-    //b1 = Buffer.from(getState(sTuya+iy).val, 'base64').readInt8(1+ix*ichParaLen);
-    //b2 = Buffer.from(getState(sTuya+iy).val, 'base64').readInt8(2+ix*ichParaLen);
-    //b3 = Buffer.from(getState(sTuya+iy).val, 'base64').readInt8(3+ix*ichParaLen);
-    //b4 = Buffer.from(getState(sTuya+iy).val, 'base64').readInt8(4+ix*ichParaLen);
-    return Buffer.from(getState(sTuya+iy).val, 'base64').readInt8(0+ix*ichParaLen);
+/**
+ * Liest die Parameter eines Kanals (nur wenn belegt)
+ */
+function chPara(i) {
+    const byteIndex = (i - 1) * iChParaLen;
+    const dp = getState(`${sTuya}${iChPara}`);
+    if (!dp || !dp.val) return 0;
+    try {
+        return Buffer.from(dp.val, 'base64').readInt8(byteIndex);
+    } catch {
+        return 0;
+    }
 }
 
-function chRtd(ich)//Channel RealTimeData
-{
-    iy = ichRtdPos[Math.floor((ich-1)/(ichRecLen/ichRtdLen))];
-    ix = (ich-1) % (ichRecLen/ichRtdLen);
-    tin = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(1+ix*ichRtdLen)/10.;
-    fin = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(3+ix*ichRtdLen)/10.;
-    tex = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(5+ix*ichRtdLen)/10.;
-    fex = Buffer.from(getState(sTuya+iy).val, 'base64').readInt16LE(7+ix*ichRtdLen)/10.;
-    batt = Buffer.from(getState(sTuya+iy).val, 'base64').readInt8(9+ix*ichRtdLen);
-    if (tin >= 130.) {tin='n/a';}
-    if (tex >= 130.) {tex='n/a';}
-    if (fin >= 130.||fin < 0.) {fin='n/a';}
-    if (fex >= 130.||fex < 0.) {fex='n/a';}
+/**
+ * Liest RealTimeData eines Kanals aus
+ */
+function chRtd(i) {
+    const bufferIndex = Math.floor((i - 1) / (iChRecLen / iChRtdLen));
+    const byteIndex = (i - 1) % (iChRecLen / iChRtdLen);
+    const dp = getState(`${sTuya}${iChRtdPos[bufferIndex]}`);
+    if (!dp || !dp.val) return defaultRtd();
+
+    try {
+        const buf = Buffer.from(dp.val, 'base64');
+        const tin = sanitizeTemp(buf.readInt16LE(1 + byteIndex * iChRtdLen));
+        const fin = sanitizeHum(buf.readInt16LE(3 + byteIndex * iChRtdLen));
+        const tex = sanitizeTemp(buf.readInt16LE(5 + byteIndex * iChRtdLen));
+        const fex = sanitizeHum(buf.readInt16LE(7 + byteIndex * iChRtdLen));
+        const batt = buf.readInt8(9 + byteIndex * iChRtdLen);
+        return { tin, fin, tex, fex, batt };
+    } catch {
+        return defaultRtd();
+    }
 }
 
+function defaultRtd() {
+    return { tin: 'n/a', fin: 'n/a', tex: 'n/a', fex: 'n/a', batt: 0 };
+}
 
-//
-// Update Funktionen
-//
+function sanitizeTemp(value) {
+    const temp = value / 10;
+    return (temp >= 130 || temp <= -50) ? 'n/a' : temp;
+}
+
+function sanitizeHum(value) {
+    const hum = value / 10;
+    return (hum >= 130 || hum < 0) ? 'n/a' : hum;
+}
+
+/**
+ * Aktualisiert nur die Namen
+ */
 function updateName() {
-    for (i = iChMin; i <= iChMax; i++)
-    {
-        if (chPara(i) > 0)
-        {
-        setState(sInkbird+ch(i)+'.'+'Name',chName(i));//
+    for (let i = iChMin; i <= iChMax; i++) {
+        if (chPara(i) > 0) {
+            setState(`${sInkbird}${ch(i)}.Name`, chName(i));
         }
     }
-};
+}
 
-
+/**
+ * Aktualisiert RealTimeData
+ */
 function updateRtd() {
-    for (i = iChMin; i <= iChMax; i++)
-    {
-        if (chPara(i) > 0)
-        {
-        chRtd(i);
-        setState(sInkbird+ch(i)+'.'+'CurrentTempInt',tin);//
-        setState(sInkbird+ch(i)+'.'+'CurrentHumInt',fin);//
-        setState(sInkbird+ch(i)+'.'+'CurrentTempExt',tex);//
-        setState(sInkbird+ch(i)+'.'+'CurrentHumExt',fex);//
-        setState(sInkbird+ch(i)+'.'+'Battery',batt);//
+    for (let i = iChMin; i <= iChMax; i++) {
+        if (chPara(i) > 0) {
+            const data = chRtd(i);
+            const base = `${sInkbird}${ch(i)}`;
+            setState(`${base}.CurrentTempInt`, data.tin);
+            setState(`${base}.CurrentHumInt`, data.fin);
+            setState(`${base}.CurrentTempExt`, data.tex);
+            setState(`${base}.CurrentHumExt`, data.fex);
+            setState(`${base}.Battery`, data.batt);
         }
     }
-};
+}
 
-
-
-// IBS-M1 Gateway --> Tuya --> Inkbird userdata
-/* Subscribe on Tuya Name changes */
-on ([sTuya+ichNamePos[0],sTuya+ichNamePos[1],sTuya+ichNamePos[2],sTuya+ichNamePos[3],sTuya+ichNamePos[4]], function() {updateName();});//Name
-/* Subscribe on Tuya RTD states */
-on ({id: sTuya+ichRtdPos[0], change: 'any'}, function() {updateRtd();});//Real Time Data
-on ({id: sTuya+ichRtdPos[1], change: 'any'}, function() {updateRtd();});//Real Time Data
-/* Subscribe on Tuya Para changes */
-on (sTuya+ichPara, function() {createChannels();});//Create new Channels
+/* Subscriptions für Änderungen im Tuya Adapter */
+on(iChNamePos.map(pos => `${sTuya}${pos}`), updateName);
+on({ id: `${sTuya}${iChRtdPos[0]}`, change: 'any' }, updateRtd);
+on({ id: `${sTuya}${iChRtdPos[1]}`, change: 'any' }, updateRtd);
+on(`${sTuya}${iChPara}`, createChannels);
